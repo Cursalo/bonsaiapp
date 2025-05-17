@@ -1,51 +1,46 @@
-import express from 'express';
+import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
-import { supabase, testConnection } from './utils/db';
+import dotenv from 'dotenv';
+import path from 'path';
+import { testConnection } from './utils/db';
 
-const app = express();
-const port = process.env.PORT || 8000;
+// Import routes
+import scoreReportRoutes from './routes/scoreReportRoutes';
+
+// Load environment variables
+dotenv.config();
+
+// Create Express server
+const app: Express = express();
+const port = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Test route
-app.get('/', async (req, res) => {
-  res.json({
-    message: 'Welcome to Bonsai Prep API',
-    version: '1.0.0',
-    status: 'online'
-  });
+// Basic route
+app.get('/', (req: Request, res: Response) => {
+  res.send('Bonsai Prep API is running');
 });
 
-// Test database connection
-app.get('/api/db-test', async (req, res) => {
-  try {
-    const isConnected = await testConnection();
-    res.json({ 
-      connected: isConnected,
-      message: isConnected ? 'Successfully connected to Supabase' : 'Failed to connect to Supabase'
-    });
-  } catch (error) {
-    console.error('Error testing database connection:', error);
-    res.status(500).json({ error: 'Failed to test database connection' });
-  }
-});
+// Apply routes
+app.use('/api/reports', scoreReportRoutes);
+
+// Connect to MySQL database
+testConnection()
+  .then((connected) => {
+    if (connected) {
+      console.log('MySQL connection successful');
+    } else {
+      console.error('MySQL connection failed - app may not function correctly');
+    }
+  })
+  .catch(err => console.error('MySQL connection error:', err));
 
 // Start server
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
-  
-  // Test database connection on startup
-  testConnection()
-    .then(isConnected => {
-      if (isConnected) {
-        console.log('Successfully connected to Supabase');
-      } else {
-        console.error('Failed to connect to Supabase');
-      }
-    })
-    .catch(error => {
-      console.error('Error testing database connection:', error);
-    });
-}); 
+});
+
+export default app; 
